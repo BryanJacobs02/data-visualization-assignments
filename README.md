@@ -1,5 +1,5 @@
-# Identifying Characteristics of Suspicious Transactions Using Association Rule Mining and Time Series Anomaly Detection
-*Final project for [INFO 523: Data Mining and Discovery](https://infosci.arizona.edu/course/info-523-data-mining-and-discovery) — University of Arizona*
+# Data Visualization Practice / Progression
+*Assignments completed for [INFO 526: Data Analysis and Visualization](https://infosci.arizona.edu/course/info-526-data-analysis-and-visualization) — University of Arizona*
   
   
 ## Project Intro/Objective
