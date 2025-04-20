@@ -3,7 +3,7 @@
   
   
 ## Intro/Objective
-These assignments exhibit some of my skills in data visualization, as well as my progression with RStudio visualization with ggplot2 over the course of a semester.
+These assignments exhibit some of my skills in data visualization, as well as my progression with RStudio ggplot2 visualization over the course of a semester.
   
   
 ## Dataset
