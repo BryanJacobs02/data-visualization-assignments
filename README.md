@@ -45,21 +45,23 @@ The visualizations in these assignments used a multitude of datasets, each prese
 * Data Visualization
 * Data Cleaning and Preprocessing
 * Data Storytelling
+* Geospatial Visualization
   
   
 ## Repository Structure
-- **`data/`**: Contains raw data file for analysis.
-- **`code/`**: Contains `.Rmd` and `.html` files of code documentation with generated visuals.
-- **`report/`**: Contains `.Rmd` and `.html` files of final report, including relevant code and generated visuals.
+- **`assignment_1/`**: Contains `.html` and `.qmd` files for Assignment 1 as well as required datasets in the `data/` folder.
+- **`assignment_2/`**: Contains `.html` and `.qmd` files for Assignment 2 as well as required datasets in the `data/` folder.
+- **`assignment_3/`**: Contains `.html` and `.qmd` files for Assignment 3 as well as required datasets in the `data/` folder.
+- **`assignment_4/`**: Contains `.html` and `.qmd` files for Assignment 4 as well as required datasets in the `data/` folder.
 - **`README.md`**
   
   
 ## How To Run
 #### For Simple Viewing
-1. Download and open desired `.html` files
+1. Download and open desired `.html` files.
 
 #### To Run Yourself
 1. Clone the repository.
-2. Open `info523_project_code.Rmd` in RStudio.
-3. Download `Big_Black_Money_Dataset.csv` from `data/` folder and place in correct directory.
+2. Open desired `.qmd` file in RStudio.
+3. Download associated datasets from corresponding `data/` folder and place in correct directory.
 4. Run the code as usual.
