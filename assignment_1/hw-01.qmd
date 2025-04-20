@@ -1,0 +1,341 @@
+---
+title: "HW 01"
+author: "Bryan Jacobs"
+format: 
+  html:
+    embed-resources: true
+toc: true
+---
+
+## 0 - Setup
+
+```{r setup}
+if (!require("pacman")) 
+  install.packages("pacman")
+
+# use this line for installing/loading
+library(pacman)
+library(ggplot2)
+library(dplyr)
+library(here)
+library(lubridate)
+library(openintro)
+library(scales)
+
+ggplot2::theme_set(ggplot2::theme_minimal(base_size = 14))
+
+devtools::install_github("tidyverse/dsbox")
+```
+
+## 1 - Road traffic accidents in Edinburgh
+
+```{r Q1}
+# Load data
+accidents_data = read.csv(here("data", "accidents.csv"))
+
+# Extract and clean data we need
+accidents_clean = as.data.frame(cbind(accidents_data$time,
+                                      accidents_data$day_of_week,
+                                      accidents_data$severity))
+colnames(accidents_clean) = c("Time",
+                              "Day",
+                              "Severity")
+
+for (i in 1:nrow(accidents_clean)){
+  if (accidents_clean$Day[i] == "Saturday") {
+    accidents_clean$Day[i] = "Weekend"
+} else if (accidents_clean$Day[i] == "Sunday"){
+    accidents_clean$Day[i] = "Weekend"
+} else accidents_clean$Day[i] = "Weekday"
+}
+
+accidents_clean$Time = hms(accidents_clean$Time)
+accidents_clean$Hour = hour(accidents_clean$Time)
+
+# Aggregate
+accidents_agg = accidents_clean %>%
+  group_by(Hour, Day, Severity) %>%
+  summarize(count = n(), .groups = "drop")
+
+# Plot the data
+ggplot(accidents_clean, aes(x = Hour, fill = Severity)) +
+  geom_density(alpha = 0.5, adjust = 1, color = 'black', position = "identity") +
+  facet_wrap(~ Day, ncol = 1) +
+  labs(x = "Time of Day",
+       y = "Density",
+       title = "Density of Accidents Throughout the Day",
+       subtitle = "By Day of Week and Severity") +
+  scale_x_continuous(breaks = 0:23, labels = sprintf("%02d:00:00", 0:23)) +
+  scale_fill_manual(values = c("Fatal" = "purple",
+                               "Serious" = "darkgreen",
+                               "Slight" = "yellow")) +
+  theme(axis.text.x = element_text(size = 10, angle = 45, hjust = 1),
+        legend.position = "right",
+        legend.direction = "vertical")
+```
+
+This figure displays the density of car accidents that occur within each hour of the day. The figure shows the density of slight, serious, and fatal crashes throughout weekdays and weekends separately. On weekdays, we see a spike in slight and serious crash density during rush hour traffic times when people are driving to and from work. Interestingly, the peak of fatal crash density occurs in the middle of the day. Perhaps the more open roads during this time allow for faster driving, and in turn a greater chance for a crash to be fatal. On the weekends, we see a very low density of accidents in the morning, and a spike in the evening. This could be due to increased traffic on roads in the evening because of people going to dinner and going out for the night; and potentially driving under the influence. The data set contained no weekend fatal crash data.
+
+## 2 - NYC marathon winners
+
+a\. Create a histogram and a box plot of the distribution of marathon times of all runners in the dataset. What features of the distribution are apparent in the histogram and not the box plot? What features are apparent in the box plot but not in the histogram?
+
+```{r Q2a}
+nyc_marathon = as.data.frame(nyc_marathon)
+
+# Histogram
+ggplot(nyc_marathon, aes(time)) +
+  geom_histogram(binwidth = 300, color = 'black') +
+  labs(y = "Number of Runners",
+       title = "NYC Marathon Times")
+
+# Boxplot
+ggplot(nyc_marathon, aes(x = time, y = "")) +
+  geom_boxplot() +
+  labs(y = NULL,
+       title = "NYC Marathon Times")
+```
+
+The histogram splits the marathon time data into five minute intervals as bins, and shows how many runners' times fall into each of these bins. The histogram allows us to see almost exactly how many peoples' times fall into each bin, and roughly see the mode and outliers as well as other commonly run times. The box plot shows us the outliers, minimum, maximum, first quartile, third quartile, and median time ran. Both the histogram and the boxplot tell us that the data is skewed right.
+
+b\. Create a side-by-side box plots of marathon times for men and women. Use different colors for the each of the box plots – do not use the default colors, but instead manually define them (you can choose any two colors you want). Based on the plots you made, compare the distribution of marathon times for men and women.
+
+```{r Q2b}
+ggplot(nyc_marathon, aes(x = time, y = "", color = division)) +
+  geom_boxplot() +
+  facet_wrap(~ division, ncol = 1) +
+  scale_color_manual(values = c('Men' = 'purple',
+                                'Women' = 'orange')) +
+  labs(y = NULL,
+       title = "NYC Marathon Times",
+       subtitle = "By Division")
+```
+
+Comparing the box plots, the men's division median time is closer to their first quartile, while the women's division median time is closer to their third quartile. Both divisions have a similar interquartile range, with the men's being slighly smaller. Each division has a similar amount of outliers, but the women's division outliers appear much further from the majority than men's division outliers.
+
+c\. What information in the above plot is redundant? Redo the plot avoiding this redundancy. How does this update change the data-to-ink ratio?
+
+The only thing redundant about the above plot is the use of the legend and the plot titles together. I personally prefer the plot titles, so I will remove the legend.
+
+```{r Q2c}
+ggplot(nyc_marathon, aes(x = time, y = "", color = division)) +
+  geom_boxplot() +
+  facet_wrap(~ division, ncol = 1) +
+  scale_color_manual(values = c('Men' = 'purple',
+                                'Women' = 'orange')) +
+  labs(y = NULL,
+       title = "NYC Marathon Times",
+       subtitle = "By Division") +
+  theme(legend.position = "none")
+```
+
+d\. Visualize the marathon times of men and women over the years. As is usual with time series plot, year should go on the x-axis. Use different colors and shapes to represent the times for men and women. Make sure your colors match those in the previous part. Once you have your plot, describe what is visible in this plot but not in the others.
+
+```{r Q2d}
+ggplot(nyc_marathon, aes(x = year, y = time, group = division, color = division)) +
+  geom_smooth(se = FALSE) +
+  scale_color_manual(values = c('Men' = 'purple',
+                                'Women' = 'orange')) +
+  labs(title = "NYC Marathon Times",
+       subtitle = "By Division")
+```
+
+As opposed to the other one dimensional plots, this plot shows the trend of how marathon times have changed over time. While we are unsure of what type of runners were sampled each year, our data along with this plot tells us that marathon times have dropped drastically since the 1970's. It also shows that over the past couple years times have actually been getting slower. However, a few years of data is not enough to confidently say marathon runners are actually getting slower.
+
+## 3 - US counties
+
+a\. What does the following code do? Does it work? Does it make sense? Why/why not?
+
+```{r Q3a}
+county_df = as.data.frame(county)
+
+ggplot(county) +
+  geom_point(aes(x = median_edu, y = median_hh_income)) +
+  geom_boxplot(aes(x = smoking_ban, y = pop2017))
+```
+
+The code runs, and creates the above plot. I think that it got confused by the geom_point and geom_boxplot combination, because it's very difficult to interpret. Attempting to read it, it seems to show points representing medium household income based on type of degree held as well as if there was a smoking ban in the respective county. All in all, the axis here don't make sense and it is not a very useful plot.
+
+b\. Which of the following two plots makes it easier to compare poverty levels (poverty) across people from different median education levels (median_edu)? What does this say about when to place a faceting variable across rows or columns?
+
+```{r Q3b}
+# Plot 1
+ggplot(county %>% filter(!is.na(median_edu))) + 
+  geom_point(aes(x = homeownership, y = poverty)) + 
+  facet_grid(median_edu ~ .)
+
+#Plot 2
+ggplot(county %>% filter(!is.na(median_edu))) + 
+  geom_point(aes(x = homeownership, y = poverty)) + 
+  facet_grid(. ~ median_edu)
+```
+
+The vertical plots (with the plot titles on the top), make it easier to compare poverty levels across different median income levels. This shows that if you want to compare your faceting variable to the y axis variable, the faceting variable should be places across columns; and when you want to compare your faceting variable to the x axis variable, the faceting variable should be placed across rows.
+
+c\. Recreate the R code necessary to generate the following graphs. Note that wherever a categorical variable is used in the plot, it’s `metro`.
+
+```{r}
+# Plot A
+ggplot(county, aes(x = homeownership, y = poverty)) +
+  geom_point() +
+  labs(title = "Plot A")
+
+# Plot B
+ggplot(county, aes(x = homeownership, y = poverty)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(title = "Plot B")
+
+# Plot C
+ggplot(county, aes(x = homeownership, y = poverty, group = metro)) +
+  geom_point() +
+  geom_smooth(se = FALSE, color = 'green') +
+  labs(title = "Plot C")
+
+# Plot D
+ggplot(county, aes(x = homeownership, y = poverty, group = metro)) +
+  geom_smooth(se = FALSE) +
+  geom_point() +
+  labs(title = "Plot D")
+
+# Plot E
+ggplot(county, aes(x = homeownership, y = poverty, group = metro)) +
+  geom_point(aes(color = metro)) +
+  geom_smooth(se = FALSE, aes(linetype = metro)) +
+  labs(title = "Plot E")
+
+# Plot F
+ggplot(county, aes(x = homeownership, y = poverty, group = metro)) +
+  geom_point(aes(color = metro)) +
+  geom_smooth(se = FALSE, aes(color = metro)) +
+  labs(title = "Plot F")
+
+# Plot G
+ggplot(county, aes(x = homeownership, y = poverty)) +
+  geom_point(aes(group = metro, color = metro)) +
+  geom_smooth(se = FALSE) +
+  labs(title = "Plot G")
+
+# Plot H
+ggplot(county, aes(x = homeownership, y = poverty, group = metro)) +
+  geom_point(aes(color = metro)) +
+  labs(title = "Plot H")
+```
+
+## 4 - Rental apartments in SF
+
+a\. Recreate the following visualization. The only aspect you do not need to match are the colors, however you should use a pair of colors of your own choosing to indicate students and non-students. Choose colors that appear “distinct enough” from each other to you. Then, describe the relationship between income and credit card balance, touching on how/if the relationship varies based on whether the individual is a student or not or whether they’re married or not.
+
+```{r Q4a}
+credit_data = read.csv(here("data", "credit.csv"))
+
+ggplot(credit_data, aes(x = income, y = balance)) +
+  geom_point(aes(color = student, shape = student)) +
+  geom_smooth(se = FALSE, method = "lm", aes(color = student)) +
+  facet_grid(rows = vars(student),
+             cols = vars(married),
+             labeller = labeller(student = label_both,
+                                 married = label_both)) +
+  scale_color_manual(values = c('No' = 'blue',
+                                'Yes' = 'red')) +
+  labs(x = "Income",
+       y = "Credit Card Balance") +
+  scale_x_continuous(labels = label_number(prefix = "$",
+                                           suffix = "K")) +
+  scale_y_continuous(labels = label_number(prefix = "$")) +
+  theme(legend.position = "none")
+```
+
+There is a direct correlation between income and credit card balance. The relationship only slightly varies based on if you're a student or married. So according to this data, regardless of student or marital status, credit card balance increases as income increases.
+
+b\. Based on your answer to part (a), do you think `married` and `student` might be useful predictors, in addition to `income` for predicting credit card balance? Explain your reasoning.
+
+I think that if we didn't have `income` data, `married` and `student` could be useful predictors. However, it seems that credit card balance is much more dependent on `income` than it is `married` or `student`.
+
+c\. Credit utilization is defined as the proportion of credit balance to credit limit. Calculate credit utilization for all individuals in the `credit` data, and use it to recreate the following visualization. Once again, the only aspect of the visualization you do not need to match are the colors, but you should use the same colors from the previous exercise.
+
+```{r Q3c}
+credit_data <- credit_data %>%
+  mutate(credit_utilization = balance / limit)
+
+ggplot(credit_data, aes(x = income, y = credit_utilization)) +
+  geom_point(aes(color = student, shape = student)) +
+  geom_smooth(se = FALSE, method = "lm", aes(color = student)) +
+  facet_grid(rows = vars(student),
+             cols = vars(married),
+             labeller = labeller(student = label_both,
+                                 married = label_both)) +
+  scale_color_manual(values = c('No' = 'blue',
+                                'Yes' = 'red')) +
+  labs(x = "Income",
+       y = "Credit Utilization") +
+  scale_x_continuous(labels = label_number(prefix = "$",
+                                           suffix = "K")) +
+  scale_y_continuous(labels = label_number(suffix = "%")) +
+  theme(legend.position = "none")
+```
+
+d\. Based on the plot from part (c), how, if at all, are the relationships between income and credit utilization different than the relationships between income and credit balance for individuals with various student and marriage status.
+
+Credit balance of people regardless of marital and student status were greatly affected by income. That is, as income increased, credit balance increased. The credit utilization of the same people was much less affected by income. As income increased, credit utilization of non-students slightly increased, and credit utilization of students slightly decreased. Credit utilization seems to be somewhat dependent on student status, and not very dependent on marital status.
+
+## 5 - Napoleon’s march.
+
+```{r Q5}
+napoleon_data = readRDS(here("data", "napoleon.rds"))
+
+troops = napoleon_data$troops
+cities = napoleon_data$cities
+temps = napoleon_data$temperatures
+
+napoleon_plot = ggplot() +
+  geom_path(data = troops, aes(x = long, y = lat, group = group,
+                               color = direction, size = survivors),
+            lineend = "round") +
+  geom_point(data = cities, aes(x = long, y = lat)) +
+  geom_text(data = cities, aes(x = long, y = lat, label = city), vjust = 1.5) +
+  scale_size(range = c(0.5, 15)) +
+  scale_colour_manual(values = c("#DFC17E", "#252523")) +
+  labs(x = NULL, y = NULL) +
+  theme(legend.position = "none")
+
+temps_plot = ggplot(data = temps, aes(x = long, y = temp)) +
+  geom_line(aes(color = temp, linewidth = 2)) +
+  geom_text(aes(label = temp), vjust = 1.5) +
+  xlim(24, 38) +
+  labs(x = NULL,
+       y = "Temp (C)")
+
+napoleon_temps_plot = rbind(ggplotGrob(napoleon_plot),
+                            ggplotGrob(temps_plot))
+grid::grid.newpage()
+grid::grid.draw(napoleon_temps_plot)
+```
+
+<https://www.andrewheiss.com/blog/2017/08/10/exploring-minards-1812-plot-with-ggplot2/>
+
+I am getting most of my code from this website. I am not copying and pasting, but writing in and plan to adjust anything that suits my style and knowledge better. I am going to describe the code step by step as I go.
+
+The original ggplot call plots the path of the troops using longitude and latitude data.
+
+Adding color = direction and size = survivors makes the path change color based on whether the troops are advancing or retreating, and makes the path change size based on the amount of surviving troops remaining.
+
+lineend = round fixes the jagged edges and makes the path look more coherent.
+
+scale_size creates more categories for the size of the survivors variable. 0.5, 10 looked best on my computer, producing good effect while not blowing things up too large.
+
+Updated colors based on colors from the article to mimic the original.
+
+Removed labels and legend to mimic the original.
+
+geom_point adds the location of cities using lat and long data.
+
+geom_text places city names in their respective locations and vjusts them down to look like a map.
+
+The second ggplot() creates the temperature figure to go beneath the main figure.
+
+xlim changes the scale to match the original plot.
+
+The code on the bottom is from my listed source. It simply pastes the two plots together.
+
+For my own touch I added a color to the temp line that scales based on temperature. This isn't particularly necessary, but it adds to the dramatic effect of the deadly situation the troops were in.
