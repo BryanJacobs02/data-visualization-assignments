@@ -1,0 +1,333 @@
+---
+title: "HW 02"
+author: "Bryan Jacobs"
+format: 
+  html:
+    embed-resources: true
+toc: true
+execute: 
+  warning: false
+  messages: false
+---
+
+## 1 - A new day, a new plot, a new geom
+
+```{r}
+#| label: Question 1
+
+if (!require("pacman")) 
+  install.packages("pacman")
+
+pacman::p_load(tidyverse,
+               ggridges,
+               dsbox,
+               ggforce,
+               palmerpenguins,
+               fs,
+               janitor,
+               scales)
+
+# remove NA's and add median score column
+bnb_df = as.data.frame(edibnb)
+bnb_clean = bnb_df |>
+  drop_na(review_scores_rating, neighbourhood) |>
+  group_by(neighbourhood) |>
+  mutate(median_score = median(review_scores_rating)) |>
+  ungroup()
+
+# order by median score
+bnb_clean = bnb_clean |>
+  mutate(neighbourhood = fct_reorder(neighbourhood, median_score))
+
+# create the plot
+bnb_clean |>
+ ggplot(aes(x = review_scores_rating, y = neighbourhood, fill = neighbourhood)) +
+  geom_density_ridges() +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  xlim(c(70, 100)) +
+  labs( x = "Air BnB Ratings",
+        y = "Neighborhood",
+        title = "Air BnB Ratings by Neighborhood")
+```
+
+#### Q1 Interpretation
+
+Shrinking the scales of the plot to only include ratings from 70 to 100 removes 93 data points from the visualization; but, with the data set containing 9,222 entries, these points were hardly visible on the visualization anyways. In doing this, the plot becomes more readable for its intended purpose, demonstrating the distribution of Air BnB ratings by neighborhood, and outliers could be viewed in a different manner if needed.
+
+The plot shows us that Morningside has the highest median rating, and Haymarket has the lowest. Keep in mind, these neighborhoods could be tied for their positions. Each neighborhood has a very similar distribution of ratings with modes around the high 90's. I think it is interesting to see the way humans think when it comes to ratings. We can see that people tend to be hesitant to rate something at exactly 100, with it being more common to see ratings in the high 90s. The figure also shows humans natural draw toward multiples of 10. Although there are very few ratings below 90, we can see a peak centered around 80 in many of the neighborhoods shown. This potentially shows that if people are going to rate lower, they're less worried about a specific number, and tend to go for a multiple of 10.
+
+#### Q1 Citations
+
+“Reorder Factor Levels by Sorting along Another Variable - Fct_reorder.” *- Fct_reorder • Forcats*, forcats.tidyverse.org/reference/fct_reorder.html. Accessed 24 Sept. 2024.
+
+Wilke, Claus O. *Introduction to Ggridges*, 22 Jan. 2024, cran.r-project.org/web/packages/ggridges/vignettes/introduction.html.
+
+## 2 - Foreign Connected PACs
+
+```{r}
+#| label: Question 2
+
+# get a list of files with "Foreign Connected PAC" in their names
+list_of_files <- dir_ls(path = "data", regexp = "Foreign Connected PAC")
+
+# read all files and row bind them
+# keeping track of the file name in a new column called year
+pac <- read_csv(list_of_files, id = "year")
+
+pac_clean = pac |>
+  clean_names() |>
+  separate(country_of_origin_parent_company, 
+           into = c("country_of_origin", "parent_company"),
+           sep = "/") |>
+  pivot_longer(cols = c(dems, repubs),
+               names_to = "party",
+               values_to = "amount") |>
+  mutate(year = str_remove(year, ".csv")) |>
+  mutate(year = str_extract(year, "\\d{4}$")) |>
+  mutate(amount = as.numeric(gsub("\\$", "", amount)))
+
+uk_pac = pac_clean |>
+  filter(country_of_origin == "UK") |>
+  group_by(year, party) |>
+  summarise(amount = sum(amount, na.rm = TRUE), .groups = "drop") |>
+  mutate(year = as.numeric(year))
+
+uk_pac |>
+  ggplot(aes(x = year, y = amount, group = party)) +
+  geom_line(aes(color = party), linewidth = 1) +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "red"),
+                     labels = c("Democrat", "Republican")) +
+  scale_y_continuous(labels = label_number(scale = 1e-6, suffix = "M", prefix = "$")) +
+  scale_x_continuous(breaks = seq(2000, 2025, by = 5)) +
+  theme(legend.position = c(0.9, 0.15),
+        axis.title = element_text(hjust = 0)) +
+  labs(color = "Party",
+       x = "Year",
+       y = "Total Amount",
+       title = "Contributions to US Political Parties from UK Connected PACs",
+       caption = "Source: OpenSecrets.org")
+
+
+# Same visualization for Japan
+japan_pac = pac_clean |>
+  filter(country_of_origin == "Japan") |>
+  group_by(year, party) |>
+  summarise(amount = sum(amount, na.rm = TRUE), .groups = "drop") |>
+  mutate(year = as.numeric(year))
+
+japan_pac |>
+  ggplot(aes(x = year, y = amount, group = party)) +
+  geom_line(aes(color = party), linewidth = 1) +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "red"),
+                     labels = c("Democrat", "Republican")) +
+  scale_y_continuous(labels = label_number(scale = 1e-6, suffix = "M", prefix = "$")) +
+  scale_x_continuous(breaks = seq(2000, 2025, by = 5)) +
+  theme(legend.position = c(0.9, 0.15),
+        axis.title = element_text(hjust = 0)) +
+  labs(color = "Party",
+       x = "Year",
+       y = "Total Amount",
+       title = "Contributions to US Political Parties from Japan Connected PACs",
+       caption = "Source: OpenSecrets.org")
+```
+
+#### Q2 Interpretation
+
+The visualization shows us that since 2000, Japan connected PAC's have have been contributing increasingly large amounts to US political parties. Their contributions have been similar to those of the UK in that from 2000 to present, Japan has almost always contributed more to the Republican party besides around 2010. Similarly to the UK again, we can see a trend of decreasing contributions to US political parties beginning within the last 5 to 10 years.
+
+#### Q2 Citations
+
+“Extract the Complete Match - Str_extract.” *- Str_extract • Stringr*, stringr.tidyverse.org/reference/str_extract.html. Accessed 24 Sept. 2024.
+
+“Separate: Separate a Character Column into Multiple Columns with a Regular Expression or Numeric Locations.” *RDocumentation*, www.rdocumentation.org/packages/tidyr/versions/1.3.1/topics/separate. Accessed 24 Sept. 2024.
+
+user969113user969113                      2, et al. “Remove Pattern from String with GSUB.” *Stack Overflow*, 1 Dec. 1957, stackoverflow.com/questions/11776287/remove-pattern-from-string-with-gsub.
+
+## 3 - Median housing prices in the US
+
+```{r}
+#| label: Question 3
+
+# PART 1
+median_housing = read_csv("data/median-housing.csv")
+recessions = read_csv("data/recessions.csv")
+
+median_housing |>
+  colnames() = c("date",
+               "price")
+
+median_housing |>
+  ggplot(aes(x = date, y = price)) +
+  geom_line(color = "royalblue", linewidth = 1) +
+  theme_minimal() +
+  scale_y_continuous(labels = label_comma(),
+                     breaks = seq(0, 400000, by = 40000),
+                     limits = c(0, 400000),
+                     minor_breaks = seq(0, 400000, by = 40000)) +
+  scale_x_date(breaks = "5 years",
+               date_labels = "%Y",
+               minor_breaks = NULL) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        plot.caption = element_text(size = 10),
+        plot.title = element_text(hjust = -0.5),
+        plot.subtitle = element_text(hjust = -0.17)) +
+  labs(x = NULL,
+       y = "Dollars",
+       title = "Median Sales Prices of Houses Sold in the United States",
+       subtitle = "Not Seasonally Adjusted",
+       caption = "Sources: Census; HUD")
+
+
+# PART 2
+recessions |>
+  colnames() = c("peak",
+                 "through")
+
+recessions_clean = recessions |>
+  mutate(in_range = case_when(
+    peak >= as.Date("1963-01-01") & peak <= as.Date("2021-04-01") ~ TRUE,
+    TRUE ~ FALSE
+  )) |>
+  filter(in_range == TRUE)
+
+ggplot() +
+  geom_rect(data = recessions_clean, aes(xmin = peak,
+                                         xmax = through,
+                                         ymin = -Inf,
+                                         ymax = Inf),
+            fill = "grey", alpha = 0.5) +
+  geom_line(data = median_housing, 
+            aes(x = date, y = price), color = "royalblue", linewidth = 1) +
+  theme_minimal() +
+  scale_y_continuous(labels = label_comma(),
+                     breaks = seq(0, 400000, by = 40000),
+                     limits = c(0, 400000),
+                     minor_breaks = seq(0, 400000, by = 40000)) +
+  scale_x_date(breaks = "5 years",
+               date_labels = "%Y",
+               minor_breaks = NULL) +
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.text.x = element_text(size = 10),
+        axis.text.y = element_text(size = 10),
+        plot.caption = element_text(size = 10),
+        plot.title = element_text(hjust = -0.5),
+        plot.subtitle = element_text(hjust = -0.17)) +
+  labs(x = NULL,
+       y = "Dollars",
+       title = "Median Sales Prices of Houses Sold in the United States",
+       subtitle = "Not Seasonally Adjusted",
+       caption = "Shaded areas indicate U.S. recessions\nSources: Census; HUD")
+
+
+# PART 3
+median_housing_sub = median_housing |>
+  filter(date >= as.Date("2019-01-01"),
+         date <= as.Date("2020-12-31")) |>
+  mutate(year = year(date)) |>
+  mutate(quarter = case_when(
+    date >= as.Date("2019-01-01") & date <= as.Date("2019-03-31") ~ "Q1",
+    date >= as.Date("2020-01-01") & date <= as.Date("2020-03-31") ~ "Q1",
+    date >= as.Date("2019-04-01") & date <= as.Date("2019-06-30") ~ "Q2",
+    date >= as.Date("2020-04-01") & date <= as.Date("2020-06-30") ~ "Q2",
+    date >= as.Date("2019-07-01") & date <= as.Date("2019-09-30") ~ "Q3",
+    date >= as.Date("2020-07-01") & date <= as.Date("2020-09-30") ~ "Q3",
+    date >= as.Date("2019-10-01") & date <= as.Date("2019-12-31") ~ "Q4",
+    date >= as.Date("2020-10-01") & date <= as.Date("2020-12-31") ~ "Q4",
+  ))
+
+median_housing_sub |>
+  ggplot(aes(x = date, y = price)) +
+  geom_line(color = "royalblue", linewidth = 1) +
+  theme_minimal() +
+  scale_x_date(breaks = median_housing_sub$date,
+               minor_breaks = median_housing_sub$date,
+               labels = median_housing_sub$quarter,
+               expand = c(0, 3)) +
+  scale_y_continuous(labels = label_comma(),
+                     breaks = seq(300000, 360000, by = 20000),
+                     limits = c(300000, 360000),
+                     expand = c(0, 0)) +
+  geom_point(shape = 21, color = "royalblue", fill = "white") +
+  labs(x = "2019                                                                            2020",
+       y = "Dollars",
+       title = "Median Sales Price of Houses Sold in the US",
+       subtitle = "Not Seasonally Adjusted") +
+  theme(axis.title.y = element_text(size = 14),
+        plot.title.position = "plot")
+```
+
+#### Q3 Citations
+
+“As.Date: Date Conversion Functions to and from Character.” *RDocumentation*, www.rdocumentation.org/packages/base/versions/3.6.2/topics/as.Date. Accessed 25 Sept. 2024.
+
+burgerburger                      5, et al. “How Does Ggplot Scale_continuous Expand Argument Work?” *Stack Overflow*, 1 Sept. 1962, stackoverflow.com/questions/44170871/how-does-ggplot-scale-continuous-expand-argument-work.
+
+“Geom_rect.” *Plotly*, plotly.com/ggplot2/geom_rect/. Accessed 24 Sept. 2024.
+
+## 4 - Expect More. Plot More.
+
+```{r}
+#| label: Question 4
+
+circles1 = tribble(
+  ~x0,   ~y0,   ~r,   ~color,     ~label,
+  3,     5,     3,    "#CC0000",  NA,
+  3,     5,     2,    "#FFFFFF",  NA,
+  1.5,   1,     NA,   "#CC0000",  "TARGET",
+  4.8,   0.5,   0.21,  "#CC0000",  NA,
+  4.8,   0.5,   0.18, "#FFFFFF",  NA
+)
+
+top_circle = tribble(
+  ~x0,    ~y0,   ~r,   ~color,      ~label,
+  3,      5,     1,    "#CC0000",   NA,
+  4.8,    0.5,   NA,   "#CC0000",   "R"
+)
+
+circles1 |>
+  ggplot() +
+  geom_circle(aes(x0 = x0, y0 = y0, r = r, fill = color, color = color)) +
+  geom_circle(data = top_circle, aes(x0 = x0, y0 = y0, r = r, fill = color, color = color)) +
+  coord_fixed() +
+  geom_text(data = circles1, aes(x = x0, y = y0, label = label, fontface = "bold", color = color), size = 10, hjust = 0) +
+  geom_text(data = top_circle, aes(x = x0, y = y0, label = label, fontface = "bold", color = color, size = 4)) +
+  scale_fill_identity() +
+  scale_color_identity() +
+  theme_void() +
+  theme(legend.position = "none")
+```
+
+#### Q4 Explanation
+
+I was happy to learn about geom_circle(), because my original plan was to use geom_smooth() with a data set of points using the equation of a circle. Instead, I created a data set of x and y coordinates, radii, color and label. x0 and y0 represent center points for the circles and coordinates for text. I would have liked to do this in one data set, but no matter the order of the entries I couldn't get the small red circle to show without calling it in a separate geom_circle(). So, the target was made by layering 3 circles, the "TARGET" was made with geom_text(), and the copyright symbol was made by layering two circles with a geom_text() call on top. The figure looks nearly the same in the HTML, so no knitting was done.
+
+#### Q4 Citations
+
+“Circles Based on Center and Radius - Geom_circle.” *- Geom_circle • Ggforce*, ggforce.data-imaginist.com/reference/geom_circle.html. Accessed 7 Oct. 2024.
+
+## 5 - Mirror, mirror on the wall, who’s the ugliest them all?
+
+```{r}
+#| label: Question 5
+
+penguins |>
+  drop_na(sex, flipper_length_mm, body_mass_g) |>
+  ggplot() +
+  geom_smooth(aes(x = body_mass_g, y = flipper_length_mm, color = sex, fill = "green?")) +
+  theme_dark() +
+  scale_color_manual(values = c("#FFFF33", "#967969")) +
+  theme(axis.text.x = element_text(size = 20),
+        axis.text.y = element_text(size = 20, angle = 180),
+        axis.title.x = element_text(angle = 40, hjust = 1),
+        axis.title.y = element_text(angle = 90),
+        ) +
+  scale_x_continuous(breaks = seq(0, 6000, by = 563)) +
+  labs(caption = "x-scale by 563 for reference, very common penguin number")
+```
