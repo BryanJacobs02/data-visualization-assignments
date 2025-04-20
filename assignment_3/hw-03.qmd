@@ -1,0 +1,617 @@
+---
+title: "HW 03"
+author: "Bryan Jacobs"
+format:
+  html:
+    embed-resources: true
+toc: true
+warnings: false
+---
+
+```{r}
+#| label: Load in Packages
+#| warning: False
+#| message: False
+
+if (!require("pacman")) 
+  install.packages("pacman")
+
+pacman::p_load(tidyverse,
+               ggthemes,
+               ggbrace,
+               viridis,
+               here)
+```
+
+## 1 - Du Bois challenge.
+
+```{r}
+#| label: Du Bois Challenge
+#| warning: False
+
+# read in data
+dubois = read.csv("data/income.csv")
+
+# fix mistake in original data
+dubois[1,6] = 0.1
+dubois[1,7] = 9.9
+
+# convert to long format
+dubois_long = dubois|>
+  pivot_longer(cols = Rent:Other,
+               names_to = "category",
+               values_to = "expenditure_percentage")
+dubois_long$category <- factor(dubois_long$category, levels = c("Other", 
+                                                              "Tax", 
+                                                              "Clothes", 
+                                                              "Food", 
+                                                              "Rent"))
+# misc cleaning
+dubois_long$Average_Income_2 = paste0("$", dubois_long$Average_Income)
+dubois_long$class_avg = paste(dubois_long$Class, dubois_long$Average_Income_2, sep = "         ")
+dubois_long$class_avg = fct_reorder(dubois_long$class_avg, -dubois_long$Average_Income)
+
+# add column for text color
+dubois_long <- dubois_long |>
+  mutate(text_color = ifelse(category == "Rent", "white", "black"),
+         label_text = ifelse(expenditure_percentage >= 1, paste0(expenditure_percentage, "%"), ""))
+
+# tables for annotations (x-axis, legend, brackets on right, lines)
+
+annot1 = tribble(
+  ~item,                          ~xpos,           ~ypos,
+  "CLASS",                        -20,             7.8,
+  "ACTUAL\nAVERAGE",              -8.7,            7.7,
+  "$100-200",                     -20,             7,
+  "$139.10",                      -9,              7,
+  "$200-300",                     -20,             6,
+  "$249.45",                      -9,              6,
+  "$300-400",                     -20,             5,
+  "$335.66",                      -9,              5,
+  "$400-500",                     -20,             4,
+  "$433.82",                      -9,              4,
+  "$500-750",                     -20,             3,
+  "$547",                         -9,              3,
+  "$750-1000",                    -20,             2,
+  "$880",                         -9,              2,
+  "$1000\nAND OVER",              -20,             1,
+  "$1,125",                       -9,              1,
+  "RENT.",                         10,             8,
+  "FOOD.",                         30,             8,
+  "CLOTHES.",                      52,             8,
+  "DIRECT TAXES.",                 73,             8,
+)  
+
+annot2 = tribble(
+  ~x1,      ~y1,       ~x2,       ~y2,
+  -25,      7.5,        3,        7.5,
+  -25,      6.5,        3,        6.5,
+  -25,      5.5,        3,        5.5,
+  -25,      4.5,        3,        4.5,
+  -25,      3.5,        3,        3.5,
+  -25,      2.5,        3,        2.5,
+  -25,      1.5,        3,        1.5,
+  -25,      0.5,        3,        0.5
+)
+
+annot3 = tribble(
+  ~x1,     ~y1,         ~x2,     ~y2,
+  0.2,     7.75,        103,     7.75,
+  0.2,     7.87,        103,     7.87,
+  20.1,    7.87,        20.1,    7.75,
+  41.2,    7.87,        41.2,    7.75,
+  62.2,    7.87,        62.2,    7.75,
+  83.2,    7.87,        83.2,    7.75,
+  103,     7.87,        103,     7.75,
+  20.1,    7.75,        19,      7.25,
+  19,      6.75,        22,      6.25,
+  22,      5.75,        23,      5.25,
+  23,      4.75,        18,      4.25,
+  18,      3.75,        13,      3.25,
+  13,      2.75,        0,       2.25,
+  41.2,    7.75,        62,      7.25,
+  62,      6.75,        69,      6.25,
+  69,      5.75,        66,      5.25,
+  66,      4.75,        55,      4.25,
+  55,      3.75,        44,      3.25,
+  44,      2.75,        37,      2.25,
+  37,      1.75,        29,      1.25,
+  62.2,    7.75,        90,      7.25,
+  90,      6.75,        92,      6.25,
+  92,      5.75,        84,      5.25,
+  84,      4.75,        70,      4.25,
+  70,      3.75,        61,      3.25,
+  61,      2.75,        56,      2.25,
+  56,      1.75,        45,      1.25,
+  83.2,    7.75,        90.1,    7.25,
+  90.1,    6.75,        96,      6.25,
+  96,      5.75,        88.5,    5.25,
+  88.5,    4.75,        75.5,    4.25,
+  75.5,    3.75,        66,      3.25,
+  66,      2.75,        64,      2.25,
+  64,      1.75,        49.5,    1.25,
+ -25,      8,          -4.9,     8,
+ -25,      8,          -25,      0.5,
+ -5,       8,          -4.9,     0.5,
+ -14,      8,          -14,      0.5
+)
+
+annot4 = tribble(
+  ~item,                              ~xpos,           ~ypos,
+  "OTHER EXPENSES AND SAVINGS.",      93,              7.97,
+)
+
+annot5 = tribble(
+  ~item,           ~xpos,      ~ypos,
+  "POOR.",         103,        6.5,
+  "FAIR.",         103,        4.5,
+  "COMFORTABLE.",  103,        2.5,
+  "WELL-TO-DO.",   103,        1
+)
+
+annot6 = tribble(
+  ~x1,         ~x2,          ~y1,           ~y2,
+  101,         103,          5.9,           7.1     
+)
+
+
+# plot
+dubois_long |>
+  ggplot(aes(x = expenditure_percentage, y = class_avg)) +
+  geom_bar(stat = "identity", width = 0.5, alpha = 0.8, aes(fill = category)) +
+  geom_text(aes(label = label_text, color = text_color),
+            position = position_stack(vjust = 0.5),
+            size = 1.8) +
+  scale_fill_manual(values = c("snow2", "steelblue2", "indianred2", "darkorchid4", "black")) +
+  scale_color_identity() +
+  labs(y = NULL,
+       x = NULL,
+       fill = "ANNUAL EXPENDITURE FOR",
+       caption = "FOR FURTHER STATISTICS RAISE THE FRAME.") +
+  expand_limits(x = c(-20, 100)) +
+  theme_wsj() +
+  geom_text(data = annot1, aes(x = xpos, y = ypos, label = item), size = 2, family = "Courier") +
+  geom_text(data = annot4, aes(x = xpos, y = ypos, label = item), size = 1.5, family = "Courier") +
+  geom_text(data = annot5, aes(x = xpos, y = ypos, label = item), size = 1.5, family = "Courier", angle = 90) + 
+  geom_segment(data = annot2, aes(x = x1, y = y1, xend = x2, yend = y2), color = "black", linewidth = 0.2, arrow = arrow(type = "closed", length = unit(0.1, "cm"))) +
+  geom_segment(data = annot3, aes(x = x1, y = y1, xend = x2, yend = y2), color = "black", linewidth = 0.1) +
+  theme(aspect.ratio = 4/7,
+        plot.title = element_text(size = 8),
+        plot.title.position = "plot",
+        legend.position = c(0.59, 1),
+        legend.title.position = "top",
+        legend.justification = "center",
+        legend.box = "horizontal",
+        legend.key.width = unit(2.3, "cm"),
+        legend.key.height = unit(0.2, "cm"),
+        legend.text = element_blank(),
+        legend.margin = margin(t = 0, unit = "pt"),
+        legend.title = element_text(size = 10, hjust = 0.5, vjust = 1),
+        legend.background = element_blank(),
+        legend.key = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.caption = element_text(size = 5, hjust = 0.5)) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  coord_cartesian(clip = "off")
+```
+
+## Q1 Citations
+
+“GGPLOT2 Legend : Easy Steps to Change the Position and the Appearance of a Graph Legend in R Software.” *STHDA*, www.sthda.com/english/wiki/ggplot2-legend-easy-steps-to-change-the-position-and-the-appearance-of-a-graph-legend-in-r-software. Accessed 4 Nov. 2024.
+
+Schulz, Andreas. *Some Examples and Explanations for pBrackets.*, cran.r-project.org/web/packages/pBrackets/vignettes/pBrackets_vignette.html. Accessed 5 Nov. 2024.
+
+“Line Segments and Curves - Geom_segment.” *- Geom_segment • Ggplot2*, ggplot2.tidyverse.org/reference/geom_segment.html. Accessed 5 Nov. 2024.
+
+## 2 - COVID survey - interpret
+
+Based on the figure, it appears that the general population as a whole is *mostly* under the impression that the vaccine is safe. This is evident in the "All" section as well as every other section, where the responses to the questions in favor of the vaccine fall at 3 or below on the Mean Likert scale. One result that did not agree with my intuition was that people in a medical profession went both ways in terms of their thoughts on the safety of the vaccine. I would have expected more medical professionals to trust the safety of the vaccine. Another surprising result was that people aged 21-25, while leaning towards believing in the safety of the vaccine, were widespread in their beliefs on that question. What is interesting about this is that nearly everyone from that demographic agreed they would recommend the vaccine to family and friends. A result that did align with my intuition was that people that got the flu shot were more likely to recommend the vaccine to friends and family than those who did not get the flu shot.
+
+## 3 - COVID survey - reconstruct
+
+```{r}
+#| label: Question 3
+#| warning: False
+#| message: False
+#| fig-width: 7
+#| fig-height: 7
+
+covid_survey = read.csv(here("data", "covid-survey.csv"), skip = 1)
+
+# Data cleaning
+covid_survey = covid_survey |>
+  filter(!if_all(exp_profession:resp_trust_info, is.na))
+
+# Relabel data
+covid_survey = covid_survey |>
+  mutate(
+    exp_already_vax = case_when(
+      exp_already_vax == 0 ~ "No",
+      exp_already_vax == 1 ~ "Yes"
+    ),
+     exp_flu_vax = case_when(
+      exp_flu_vax == 0 ~ "No",
+      exp_flu_vax == 1 ~ "Yes"
+    ),
+    exp_profession = case_when(
+      exp_profession == 0 ~ "Medical",
+      exp_profession == 1 ~ "Nursing"
+    ),
+    exp_gender = case_when(
+      exp_gender == 0 ~ "Male",
+      exp_gender == 1 ~ "Female",
+      exp_gender == 3 ~ "Non-binary third gender",
+      exp_gender == 4 ~ "Prefer not to say"
+    ),
+    exp_race = case_when(
+      exp_race == 1 ~ "American Indian / Alaskan Native",
+      exp_race == 2 ~ "Asian",
+      exp_race == 3 ~ "Black / African American",
+      exp_race == 4 ~ "Native Hawaiian / Other Pacific Islander",
+      exp_race == 5 ~ "White"
+    ),
+    exp_ethnicity = case_when(
+      exp_ethnicity == 1 ~ "Hispanic / Latino",
+      exp_ethnicity == 2 ~ "Non Hispanic / Non Latino"
+    ),
+    exp_age_bin = case_when(
+      exp_age_bin == 0 ~ "<20",
+      exp_age_bin == 20 ~ "21-25",
+      exp_age_bin == 25 ~ "26-30",
+      exp_age_bin == 30 ~ ">30"
+    )
+  )
+
+# Pivot experience / demographics
+covid_survey_longer = covid_survey |>
+  pivot_longer(
+    cols = starts_with("exp_"),
+    names_to = "explanatory",
+    values_to = "explanatory_value"
+  ) |>
+  filter(!is.na(explanatory_value)) |>
+  pivot_longer(
+    cols = starts_with("resp_"),
+    names_to = "response",
+    values_to = "response_value"
+  )
+
+# Group statistics
+covid_survey_summary_group = covid_survey_longer |>
+  group_by(explanatory, explanatory_value, response) |>
+  summarize(
+    mean = round(mean(response_value, na.rm = TRUE), 2),
+    low = round(quantile(response_value, 0.1, na.rm = TRUE), 0),
+    high = quantile(response_value, 0.9, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#  Overall statistics
+covid_survey_summary_all = covid_survey_longer |>
+  group_by(response) |>
+  summarize(
+    mean = round(mean(response_value, na.rm = TRUE), 2),
+    low = round(quantile(response_value, 0.1, na.rm = TRUE), 0),
+    high = quantile(response_value, 0.9, na.rm = TRUE),
+    explanatory = "All",
+    explanatory_value = "",
+    .groups = "drop"
+  ) |>
+  mutate(explanatory_value = as.factor(explanatory_value))
+
+# Row bind
+covid_survey_summary_stats = rbind(
+  covid_survey_summary_all,
+  covid_survey_summary_group
+)
+
+# Relabel responses
+covid_survey_summary_stats_relabel = covid_survey_summary_stats |>
+  mutate(
+    response = case_when(
+      response == "resp_safety" ~ "Based on my understanding, I believe the vaccine is safe",
+      response == "resp_confidence_science" ~ "I am confident in the scientific vetting process for the new COVID vaccines",
+      response == "resp_feel_safe_at_work" ~ "Getting the vaccine will make me feel safer at work",
+      response == "resp_will_recommend" ~ "I will recommend the vaccine to family, friends, and community members",
+      response == "resp_trust_info" ~ "I trust the information that I have received about the vaccines",
+      response == "resp_concern_safety" ~ "I am concerned about the safety and side effects of the vaccine"
+    ),
+    explanatory = case_when(
+      explanatory == "exp_age_bin" ~ "Age",
+      explanatory == "exp_gender" ~ "Gender",
+      explanatory == "exp_race" ~ "Race",
+      explanatory == "exp_ethnicity" ~ "Ethnicity",
+      explanatory == "exp_profession" ~ "Profession",
+      explanatory == "exp_already_vax" ~ "Had COVID vaccine",
+      explanatory == "exp_flu_vax" ~ "Had flu vaccine this year",
+      explanatory == "All" ~ "All"
+    ),
+    explanatory_value = case_when(
+      explanatory_value == "Native Hawaiian / Other Pacific Islander" ~ "Native Hawaiian /\nOther Pacific Islander",
+      explanatory_value == "American Indian / Alaskan Native" ~ "American Indian /\nAlaskan Native",
+      TRUE ~ explanatory_value
+    ),
+    explanatory = fct_relevel(explanatory, c("All", "Age", "Gender", "Race", "Ethnicity", "Profession")),
+    explanatory_value = fct_relevel(explanatory_value, c("<20", "21-25", "26-30", ">30"))
+  )
+
+# Plotting
+covid_survey_summary_stats_relabel |>
+  ggplot(aes(x = mean, y = explanatory_value)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = low, xmax = high),
+                 height = 0.25) +
+  labs(
+    x = "Mean Likert Score \n(Error bars range from 10th to 90th percentile)",
+    y = NULL
+  ) +
+facet_grid(
+  explanatory ~ response,
+  scales = "free_y",
+  space = "free",
+  labeller = labeller(
+    response = label_wrap_gen(12),
+    explanatory = label_wrap_gen(12),
+    .multi_line = TRUE
+  )
+) + 
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    strip.background = element_rect(fill = "grey90", linewidth = 0.25),
+    strip.text.x = element_text(size = 8.4),
+    strip.text.y = element_text(angle = 0, size = 9),
+    axis.text = element_text(size = 8.4),
+    axis.title = element_text(size = 12)
+  )
+```
+
+## Q2 Citations
+
+“Horizontal Error Bars - Geom_errorbarh.” *- Geom_errorbarh • Ggplot2*, ggplot2.tidyverse.org/reference/geom_errorbarh.html. Accessed 6 Nov. 2024.
+
+## 4 - COVID survey - re-reconstruct
+
+```{r}
+#| label: Question 4
+#| warning: False
+#| message: False
+#| fig-width: 7
+#| fig-height: 7
+
+# Group statistics
+covid_survey_summary_group = covid_survey_longer |>
+  group_by(explanatory, explanatory_value, response) |>
+  summarize(
+    mean = round(mean(response_value, na.rm = TRUE), 2),
+    low = round(quantile(response_value, 0.25, na.rm = TRUE), 0),
+    high = quantile(response_value, 0.75, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#  Overall statistics
+covid_survey_summary_all = covid_survey_longer |>
+  group_by(response) |>
+  summarize(
+    mean = round(mean(response_value, na.rm = TRUE), 2),
+    low = round(quantile(response_value, 0.25, na.rm = TRUE), 0),
+    high = quantile(response_value, 0.75, na.rm = TRUE),
+    explanatory = "All",
+    explanatory_value = "",
+    .groups = "drop"
+  ) |>
+  mutate(explanatory_value = as.factor(explanatory_value))
+
+# Row bind
+covid_survey_summary_stats = rbind(
+  covid_survey_summary_all,
+  covid_survey_summary_group
+)
+
+# Relabel responses
+covid_survey_summary_stats_relabel = covid_survey_summary_stats |>
+  mutate(
+    response = case_when(
+      response == "resp_safety" ~ "Based on my understanding, I believe the vaccine is safe",
+      response == "resp_confidence_science" ~ "I am confident in the scientific vetting process for the new COVID vaccines",
+      response == "resp_feel_safe_at_work" ~ "Getting the vaccine will make me feel safer at work",
+      response == "resp_will_recommend" ~ "I will recommend the vaccine to family, friends, and community members",
+      response == "resp_trust_info" ~ "I trust the information that I have received about the vaccines",
+      response == "resp_concern_safety" ~ "I am concerned about the safety and side effects of the vaccine"
+    ),
+    explanatory = case_when(
+      explanatory == "exp_age_bin" ~ "Age",
+      explanatory == "exp_gender" ~ "Gender",
+      explanatory == "exp_race" ~ "Race",
+      explanatory == "exp_ethnicity" ~ "Ethnicity",
+      explanatory == "exp_profession" ~ "Profession",
+      explanatory == "exp_already_vax" ~ "Had COVID vaccine",
+      explanatory == "exp_flu_vax" ~ "Had flu vaccine this year",
+      explanatory == "All" ~ "All"
+    ),
+    explanatory_value = case_when(
+      explanatory_value == "Native Hawaiian / Other Pacific Islander" ~ "Native Hawaiian /\nOther Pacific Islander",
+      explanatory_value == "American Indian / Alaskan Native" ~ "American Indian /\nAlaskan Native",
+      TRUE ~ explanatory_value
+    ),
+    explanatory = fct_relevel(explanatory, c("All", "Age", "Gender", "Race", "Ethnicity", "Profession")),
+    explanatory_value = fct_relevel(explanatory_value, c("<20", "21-25", "26-30", ">30"))
+  )
+
+# Plotting
+covid_survey_summary_stats_relabel |>
+  ggplot(aes(x = mean, y = explanatory_value)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = low, xmax = high),
+                 height = 0.25) +
+  labs(
+    x = "Mean Likert Score \n(Error bars range from 10th to 90th percentile)",
+    y = NULL
+  ) +
+facet_grid(
+  explanatory ~ response,
+  scales = "free_y",
+  space = "free",
+  labeller = labeller(
+    response = label_wrap_gen(12),
+    explanatory = label_wrap_gen(12),
+    .multi_line = TRUE
+  )
+) + 
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    strip.background = element_rect(fill = "grey90", linewidth = 0.25),
+    strip.text.x = element_text(size = 8.4),
+    strip.text.y = element_text(angle = 0, size = 9),
+    axis.text = element_text(size = 8.4),
+    axis.title = element_text(size = 12)
+  )
+```
+
+Most of the responses now tend to only vary by up to 2 points on the Likert scale. This means that the "middle" 50% of the population has relatively similar thoughts on each of the questions, while other people, even outside of the "bottom" and "top" 10% make the responses appear more extreme. Overall, it becomes clear that people generally trust the vaccine and believe that it will make them feel safer.
+
+## 5 - COVID survey - another view
+
+```{r}
+#| label: Question 5 Plot 1
+#| warning: False
+#| message: False
+#| fig-alt: "A 100% bar chart showing the proportions of survey responses to COVID related questions, mesaured on the Likert scale."
+
+covid_summary = covid_survey_longer |>
+  group_by(response, response_value) |>
+  summarise(count = n(), .groups = "drop") |>
+  group_by(response) |>
+  mutate(percentage = (count / sum(count)) * 100) |>
+  ungroup() |>
+  drop_na()
+
+perc_labs = tribble(
+  ~x,     ~y,      ~label,
+  90,     1,       "11%",
+  73,     1,       "23%",
+  56,     1,       "11%",
+  36,     1,       "30%",
+  11,     1,       "21%",
+  62,     2,       "66%",
+  18,     2,       "22%",
+  55,     3,       "77%",
+  13,     3,       "10%",
+  66,     4,       "58%",
+  31,     4,       "13%",
+  8,      4,       "17%",
+  61,     5,       "69%",
+  17,     5,       "20%",
+  52,     6,       "84%"
+)
+
+
+covid_summary |>
+  ggplot() +
+  geom_bar(aes(x = percentage, y = response, fill = factor(response_value)), stat = "identity") +
+  scale_fill_manual(values = c("1" = "darkgreen",
+                               "2" = "green",
+                               "3" = "yellow",
+                               "4" = "red",
+                               "5" = "darkred"),
+                    labels = c("Strongly Agree",
+                               "Somewhat Agree",
+                               "Neither Agree Nor Disagree",
+                               "Somewhat Disagree",
+                               "Strongly Disagree")) +
+  geom_text(data = perc_labs, aes(x = x, y = y, label = label)) +
+  scale_y_discrete(labels = c("I am concerned about the safety\nand side effects of the vaccine",
+                              "I am confident in the scientific vetting\nprocess for the new COVID vaccines",
+                              "Getting the vaccine will make me\nfeel safer at work",
+                              "Based on my understanding, I\nbelieve the vaccine is safe",
+                              "I trust the information that\nI have received about the vaccines",
+                              "I will recommend the vaccine to\nfamily, friends, and community members")) +
+  labs(x = NULL,
+       y = NULL,
+       title = "COVID-19 Survey Responses",
+       subtitle = "percentages rounded to the nearest whole number") +
+  theme_minimal() +
+  theme(axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_blank(),
+        legend.position = "top",
+        legend.title = element_blank(),
+        legend.text = element_text(size = 6),
+        legend.key.size = unit(0.01, "npc"))
+
+
+# divergent bar chart
+covid_summary = covid_summary |>
+  mutate(percentage_divergence = case_when(
+    response_value %in% c(1, 2) ~ percentage,
+    response_value %in% c(4, 5) ~ -percentage,
+    response_value == 3 ~ percentage / 2
+  ))
+
+perc_labs2 = tribble(
+  ~x,     ~y,      ~label,
+  34,     1,       "11%",
+  17,     1,       "23%",
+  -9,     1,       "30%",
+  -34,    1,       "21%",
+  55,     2,       "66%",
+  12,     2,       "22%",
+  50,     3,       "77%",
+  44,     4,       "58%",
+  8,      4,       "13%",
+  -8,     4,       "17%",
+  55,     5,       "69%",
+  12,     5,       "20%",
+  48,     6,       "84%"
+)
+```
+
+```{r}
+#| label: Question 5 Plot 2
+#| warning: False
+#| message: False
+#| fig-alt: "A diverging bar chart showing the proportions of survey responses to COVID related questions, mesaured on the Likert scale."
+
+covid_summary |>
+  ggplot() +
+  geom_bar(aes(x = percentage_divergence, y = response, fill = factor(response_value)), stat = "identity") +
+  scale_fill_manual(values = c("1" = "darkgreen",
+                               "2" = "green",
+                               "3" = "yellow",
+                               "4" = "red",
+                               "5" = "darkred"),
+                    labels = c("Strongly Agree",
+                               "Somewhat Agree",
+                               "Neither Agree Nor Disagree",
+                               "Somewhat Disagree",
+                               "Strongly Disagree")) +
+  geom_text(data = perc_labs2, aes(x = x, y = y, label = label)) +
+  scale_y_discrete(labels = c("I am concerned about the safety\nand side effects of the vaccine",
+                              "I am confident in the scientific vetting\nprocess for the new COVID vaccines",
+                              "Getting the vaccine will make me\nfeel safer at work",
+                              "Based on my understanding, I\nbelieve the vaccine is safe",
+                              "I trust the information that\nI have received about the vaccines",
+                              "I will recommend the vaccine to\nfamily, friends, and community members")) +
+  labs(x = NULL,
+       y = NULL,
+       title = "COVID-19 Survey Responses",
+       subtitle = "percentages rounded to the nearest whole number") +
+  theme_minimal() +
+  theme(axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_blank(),
+        legend.position = "top",
+        legend.title = element_blank(),
+        legend.text = element_text(size = 6),
+        legend.key.size = unit(0.01, "npc"))
+```
+
+The two charts convey very similar information. The diverging chart allows the viewer to more simply visualize what side of the spectrum the responses tend to fall on, while the 100% bar chart allows the viewer to more simply visualize the proportions of each response for the questions.
