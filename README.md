@@ -2,39 +2,49 @@
 *Assignments completed for [INFO 526: Data Analysis and Visualization](https://infosci.arizona.edu/course/info-526-data-analysis-and-visualization) — University of Arizona*
   
   
-## Project Intro/Objective
-The purpose of this project is to analyze financial transaction data in order to identify potentially suspicious activity that may indicate fraud or money laundering. Using association rule mining, we aim to discover common patterns in flagged transactions that could improve detection and prevention methods. We also apply time series anomaly detection techniques to assess whether suspicious transactions are increasing over time and to identify irregular spikes. 
+## Intro/Objective
 
-Together, these methods provide a data-driven foundation for proactive monitoring and intervention. By uncovering these insights, the project contributes to enhancing transparency and accountability in financial systems, with clear implications for civic and regulatory efforts.
   
   
 ## Dataset
-The Kaggle dataset used for this project can be accessed using the following link:
-- [Dataset Link](https://www.kaggle.com/datasets/waqi786/global-black-money-transactions-dataset)
+The visualizations in these assignments used a multitude of datasets, each present in the `data/` folder of their respective assignment folder.
   
   
 ## Authors
-**Bryan Jacobs** — Association Rule Mining  
-**Anirudh K** — Time Series Anomaly Detection
+**Bryan Jacobs**
   
   
 ## Languages/Packages:
 * R
  * tidyverse (ggplot2, dplyr)
+ * here
+ * lubridate
+ * openintro
+ * scales
+ * ggridges
+ * dsbox
+ * ggforce
+ * palmerpenguins
+ * fs
  * janitor
- * arules, arulesViz
- * anomalize
- * caret
+ * ggthemes
+ * ggbrace
+ * viridis
+ * tigris
+ * sf
+ * readxl
+ * patchwork
   
   
 ## Software & Platforms
-* RStudio / R Markdown
+* RStudio / Quarto Markdown
 * GitHub
 
 
-## Models
-* Association Rule Mining
-* Time Series Anomaly Detection
+## Models & Skills
+* Data Visualization
+* Data Cleaning and Preprocessing
+* Data Storytelling
   
   
 ## Repository Structure
