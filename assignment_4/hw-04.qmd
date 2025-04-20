@@ -1,0 +1,302 @@
+---
+title: "HW 04"
+author: "Bryan Jacobs"
+format:
+  html:
+    embed-resources: true
+toc: true
+---
+
+```{r load-packages, message = FALSE}
+
+if (!require("pacman")) 
+  install.packages("pacman")
+
+pacman::p_load(tidyverse,
+               openintro,
+               tigris,
+               dplyr,
+               sf,
+               readxl,
+               patchwork)
+```
+
+## 1 - A second chance
+
+```{r}
+#| label: Q1 Original Plot
+#| warning: False
+#| message: False
+
+nyc_marathon = as.data.frame(nyc_marathon)
+
+ggplot(nyc_marathon, aes(x = year, y = time, group = division, color = division)) +
+  geom_smooth(se = FALSE) +
+  scale_color_manual(values = c('Men' = 'purple',
+                                'Women' = 'orange')) +
+  labs(title = "NYC Marathon Times",
+       subtitle = "By Division") +
+  theme_minimal()
+```
+
+This plot from HW 01 is the plot I lost the most points on on a HW this semester. The feedback was that I did not add a custom legend title and shape. These edits will be added below.
+
+```{r}
+#| label: Q1 Revised Plot
+#| warning: False
+#| message: False
+
+ggplot(nyc_marathon, aes(x = year, y = time, group = division, color = division)) +
+  geom_smooth(se = FALSE) +
+  scale_color_manual(name = "Runner Category",
+                     values = c('Men' = 'purple',
+                                'Women' = 'orange')) +
+  labs(title = "NYC Marathon Times",
+       subtitle = "By Division") +
+  theme(
+    legend.position = c(0.7, 0.8),
+    legend.direction = "horizontal",
+    legend.background = element_rect(fill = "white",
+                                     color = "black"),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.background = element_rect(fill = "white", color = NA),
+    plot.background = element_rect(fill = "white", color = NA)
+  )
+```
+
+## 2. Arizona state of counties
+
+```{r}
+#| label: Q2 Shapefile Download
+#| warning: false
+#| message: false
+#| cache: true
+
+az_counties <- counties(state = "AZ", year = 2021, progress_bar = FALSE)
+```
+
+```{r}
+#| label: Q2
+#| warning: false
+#| message: false
+
+az_counties_clean = az_counties |>
+  mutate(NAMELSAD = gsub("County", "", NAMELSAD))
+
+az_counties_sf = st_as_sf(az_counties_clean)
+
+# Calculate centroids of the counties for label placement
+az_counties_centroids = st_centroid(az_counties_sf)
+
+# Extract the x and y coordinates of the centroids
+coords = st_coordinates(az_counties_centroids)
+
+# Add the coordinates to the sf object
+az_counties_sf = az_counties_sf |>
+  mutate(x = coords[, 1], y = coords[, 2])
+
+# Move Navajo label to avoid overlap
+az_counties_sf = az_counties_sf |>
+  mutate(y = ifelse(NAMELSAD == "Navajo ", y + 0.3, y))
+
+az_counties_sf |>
+  ggplot() +
+  geom_sf() +
+  geom_label(aes(x = x, y = y, label = NAMELSAD),
+             size = 3,
+             label.size = 0.5,
+             label.padding = unit(0.2, "lines"),
+             label.r = unit(0.3, "lines"),
+             fill = "white",
+             color = "black") +
+  labs(title = "Counties in Arizona State",
+       x = "Longitude",
+       y = "Latitude",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1") +
+  theme_minimal() +
+  coord_sf(clip = "off")
+```
+
+## 3. Arizona state of population change
+
+```{r}
+#| label: Q3
+#| warning: false
+#| message: false
+
+pop2023 = read_excel("data/co-est2023-pop-04.xlsx", range = "A5:F20")
+
+colnames(pop2023) = c("county",
+                      "pop_april_2020",
+                      "pop_july_2020",
+                      "pop_2021",
+                      "pop_2022",
+                      "pop_2023")
+
+pop2023_change = pop2023 |>
+  mutate(total_pop_change_20_23 = pop_2023 - pop_july_2020) |>
+  arrange(county)
+
+az_counties_sf_az = az_counties_sf |>
+  arrange(NAME)
+
+az_counties_pop_change = cbind(az_counties_sf_az,
+                               pop2023_change)
+
+az_counties_pop_change_sf = st_as_sf(az_counties_pop_change)
+
+az_counties_pop_change_sf|>
+  ggplot() +
+  geom_sf(aes(fill = total_pop_change_20_23), color = "white") +
+  labs(title = "Resident Population Change for Counties in AZ",
+       subtitle = "July 01, 2020 to July 01, 2023",
+       x = "Longitude",
+       y = "Latitude",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1\n
+       population change data from the US Census Bureau") +
+  scale_fill_gradient2(low = "#0061b1",
+                      mid = "white",
+                      high = "#d40000",
+                      midpoint = 75000,
+                      name = "Population Change") +
+  theme_minimal() +
+  theme(
+    plot.title.position = "plot"
+  )
+```
+
+## 4. Arizona state of Indigenous Tribal Regions
+
+```{r}
+#| label: Q4
+#| warning: false
+#| message: false
+
+tribal_areas_sf = st_read("data/American_Indian_Reservations_in_Arizona.shp")
+
+az_counties_sf_standardized = st_transform(az_counties_sf, crs = 4269)
+
+# Calculate centroids for tribal areas for label placement
+tribal_areas_sf$centroid = st_centroid(tribal_areas_sf$geometry)
+
+# Create a new data frame with the centroids for label placement
+tribal_labels_df = as.data.frame(tribal_areas_sf)
+tribal_labels_df$label = tribal_labels_df$NAME
+tribal_labels_df_subset = tribal_labels_df |>
+  filter(label %in% c("Hopi Tribe",
+                      "Navajo Nation",
+                      "White Mountain Apache Tribe",
+                      "San Carlos Apache Tribe",
+                      "Tohono O’odham Nation")) |>
+  mutate(x = st_coordinates(centroid)[,1],
+         y = st_coordinates(centroid)[,2],
+         y = ifelse(label == "Navajo Nation", y + 0.6, y))
+
+
+ggplot() +
+  geom_sf(data = az_counties_sf_standardized, fill = "grey90", color = "white") +
+  geom_sf(data = tribal_areas_sf, fill = "grey80", color = "black", linewidth = 1) +
+  geom_label(data = tribal_labels_df_subset, aes(x = x, y = y, label = label),
+             size = 3,
+             label.size = 0.5,
+             label.padding = unit(0.2, "lines"),
+             label.r = unit(0.3, "lines"),
+             fill = "white",
+             color = "black") +
+  labs(title = "Indigenous Tribal Boundaries in AZ",
+       x = "Longitude",
+       y = "Latitude",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1\n
+       Indigenous Tribe Shapefile obtained from AZGeo Data"
+       ) +
+  theme_minimal() +
+  coord_sf(clip = "off") +
+  theme(
+    plot.title.position = "plot"
+  )
+```
+
+## 5. Arizona state of patchwork
+
+```{r}
+#| label: Q5
+#| warning: false
+#| message: false
+#| results: false
+
+
+tribal_labels_df2 = as.data.frame(tribal_areas_sf)
+tribal_labels_df2$label = tribal_labels_df2$NAME
+tribal_labels_df_subset2 = tribal_labels_df2 |>
+  filter(label %in% c("White Mountain Apache Tribe",
+                      "San Carlos Apache Tribe",
+                      "Tohono O’odham Nation")) |>
+   mutate(x = st_coordinates(centroid)[,1],
+          y = st_coordinates(centroid)[,2],
+          x = ifelse(label == "San Carlos Apache Tribe", x - 1.5, x),
+          x = ifelse(label == "White Mountain Apache Tribe", x - 1.6, x))
+
+county_labs = as.data.frame(az_counties_sf)
+county_labs$label = county_labs$NAME
+county_labs_subset = county_labs |>
+  filter(label %in% c("Maricopa",
+                      "Pima",
+                      "Pinal"))
+
+
+full_map = ggplot(data = az_counties_pop_change_sf) +
+  geom_sf(aes(fill = total_pop_change_20_23), color = "white") +
+  geom_label(data = county_labs_subset, aes(x = x, y = y, label = label),
+             size = 3,
+             label.size = 0.5,
+             label.padding = unit(0.2, "lines"),
+             label.r = unit(0.3, "lines"),
+             fill = "white",
+             color = "black") +
+  labs(x = NULL,
+       y = NULL,
+       title = "Resident Population Change for Counties in Arizona",
+       subtitle = "July 01, 2020 to July 01, 2023",
+       caption = "Source: Shapefile obtained using {tigris} R package, v2.0.1\n
+       population change data from the US Census Bureau\n
+       Indigenous Tribe Shapefile obtained from AZGeo Data") +
+  scale_fill_gradient2(low = "#0061b1",
+                      mid = "white",
+                      high = "#d40000",
+                      midpoint = 75000,
+                      name = "Population Change") +
+  theme_void() +
+  theme(
+    legend.direction = "horizontal",
+    legend.position = c(-0.3, 0.8),
+    legend.title.position = "top",
+    plot.title = element_text(hjust = 1.2),
+    plot.subtitle = element_text(hjust = -3.9)
+  )
+  coord_cartesian(xlim = c(90, 130),
+                  ylim = c(25, 40))
+
+zoomed_map = ggplot() +
+  geom_sf(data = az_counties_pop_change_sf, aes(fill = total_pop_change_20_23), 
+          color = "white") +
+  geom_sf(data = tribal_areas_sf, fill = "transparent", color = "black", linewidth = 1) +
+  geom_label(data = tribal_labels_df_subset2, aes(x = x, y = y, label = label),
+             size = 1.7,
+             label.size = 0.5,
+             label.padding = unit(0.2, "lines"),
+             label.r = unit(0.3, "lines"),
+             fill = "white",
+             color = "black") +
+  coord_sf(xlim = c(-113.2, -110.58), ylim = c(31.6, 34.0)) +
+  scale_fill_gradient2(low = "#0061b1",
+                       mid = "white",
+                       high = "#d40000",
+                       midpoint = 75000,
+                       name = "Population Change") +
+  theme_void() +
+  theme(
+    legend.position = "none"
+  ) 
+
+full_map + inset_element(zoomed_map, -0.6, -0.6, -0.2, 1)
+```
