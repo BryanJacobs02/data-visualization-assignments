@@ -16,24 +16,24 @@ The visualizations in these assignments used a multitude of datasets, each prese
   
 ## Languages/Packages:
 * R
- * tidyverse (ggplot2, dplyr)
- * here
- * lubridate
- * openintro
- * scales
- * ggridges
- * dsbox
- * ggforce
- * palmerpenguins
- * fs
- * janitor
- * ggthemes
- * ggbrace
- * viridis
- * tigris
- * sf
- * readxl
- * patchwork
+  * tidyverse (ggplot2, dplyr)
+  * here
+  * lubridate
+  * openintro
+  * scales
+  * ggridges
+  * dsbox
+  * ggforce
+  * palmerpenguins
+  * fs
+  * janitor
+  * ggthemes
+  * ggbrace
+  * viridis
+  * tigris
+  * sf
+  * readxl
+  * patchwork
   
   
 ## Software & Platforms
